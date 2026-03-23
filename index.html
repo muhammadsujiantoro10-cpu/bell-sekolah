@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="id" data-mode="normal">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistem Bell Sekolah Otomatis — SMPN 2 Umbulsari">
+  <meta name="theme-color" content="#0f1b32">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SmartBell">
+  <title>Smart Bell PRO — SMPN 2 Umbulsari</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Tambahan style untuk fitur v6 -->
+  <style>
+    /* ── Upload zone kecil (per jadwal) ── */
+    .upload-zone-sm {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-zone-sm:hover, .upload-zone-sm.drag {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* ── Sound chip per jadwal ── */
+    .si-snd {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 3px 9px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 10px; font-weight: 700;
+      color: var(--text-secondary);
+      max-width: 120px; overflow: hidden;
+      flex-shrink: 0;
+      font-family: 'Exo 2', sans-serif;
+    }
+    .si-snd:hover { border-color: var(--accent); color: var(--accent); }
+    .si-snd.custom { background: rgba(0,230,118,.09); border-color: rgba(0,230,118,.35); color: #00e676; }
+    .si-snd .sn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex:1; }
+    .si-snd .arr { font-size: 9px; opacity: .5; flex-shrink:0; }
+
+    /* ── Auto-save badge ── */
+    .autosave-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 10px; color: var(--success);
+      font-family: 'Exo 2', sans-serif; font-weight: 600;
+    }
+    .autosave-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Sound option modal list ── */
+    .sp-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px;
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .sp-item:hover  { border-color: var(--accent); background: var(--accent-soft); }
+    .sp-item.sel    { border-color: var(--success); background: rgba(0,230,118,.07); }
+
+    /* ── Sound lib item ── */
+    .slib-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 13px;
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      margin-bottom: 5px;
+    }
+    .slib-item.is-def { border-color: var(--success); background: rgba(0,230,118,.05); }
+    .slib-name { font-size: 12px; font-weight: 700; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .slib-meta { font-size: 9px; color: var(--text-muted); display:flex; gap:5px; align-items:center; margin-top:2px; }
+    .extb      { font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 100px; }
+    .def-bdg   { font-size: 8px; font-weight: 700; padding: 2px 7px; background: rgba(0,230,118,.1); color: var(--success); border: 1px solid rgba(0,230,118,.28); border-radius: 100px; }
+    .slibtn    { width: 26px; height: 26px; border-radius: 50%; border: 1px solid; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; transition: var(--transition); flex-shrink: 0; }
+    .slibtn.play { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+    .slibtn.setd { background: rgba(0,230,118,.08); border-color: rgba(0,230,118,.3); color: var(--success); }
+    .slibtn.rm   { background: rgba(255,23,68,.07); border-color: rgba(255,23,68,.28); color: var(--danger); }
+    .slibtn:hover { filter: brightness(1.25); }
+
+    /* ── Sound select button in modal ── */
+    .snd-sel-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px;
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer; transition: var(--transition);
+      font-family: 'Exo 2', sans-serif; font-size: 11px; color: var(--text-secondary);
+    }
+    .snd-sel-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+    .snd-sel-btn .sndname { flex:1; font-weight:700; }
+
+    /* ── Wave container ── */
+    .wave-row {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 12px;
+    }
+    #wcanvas { flex:1; height: 44px; }
+    #wtime   { font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--accent); min-width: 68px; text-align: right; }
+
+    /* ── Checkbox ── */
+    .exp-checks { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .exp-check-lbl { display: flex; align-items: center; gap: 7px; font-size: 11px; cursor: pointer; font-family: 'Exo 2', sans-serif; }
+    .exp-check-lbl input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+
+    /* ── Data info table ── */
+    .data-info { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .di-row    { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 10px; }
+    .di-row:last-child { border-bottom: none; }
+    .di-lbl    { color: var(--text-muted); font-weight: 700; }
+    .di-val    { color: var(--text-primary); font-weight: 700; font-family: 'Orbitron', monospace; font-size: 9px; }
+
+    /* ── Info card ── */
+    .info-card       { padding: 10px 13px; border-radius: var(--radius-sm); font-size: 10px; line-height: 1.65; font-family: 'Exo 2', sans-serif; }
+    .info-card.green { background: rgba(0,230,118,.05); border: 1px solid rgba(0,230,118,.2); color: var(--text-secondary); }
+    .info-card.blue  { background: rgba(0,201,255,.05); border: 1px solid rgba(0,201,255,.18); color: var(--text-secondary); }
+
+    /* ── EI cards ── */
+    .ei-card      { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .ei-head      { padding: 10px 14px; background: var(--bg-card-2); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; }
+    .ei-body      { padding: 13px; display: flex; flex-direction: column; gap: 8px; }
+    .ei-row       { display: flex; align-items: center; gap: 9px; padding: 9px 12px; background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: var(--transition); }
+    .ei-row:hover { border-color: var(--border-bright); }
+
+    /* ── Buttons ── */
+    .btn-succ { padding: 6px 13px; background: rgba(0,230,118,.1); border: 1px solid rgba(0,230,118,.35); border-radius: var(--radius-sm); color: var(--success); font-family: 'Exo 2', sans-serif; font-size: 10px; font-weight: 700; cursor: pointer; transition: var(--transition); }
+    .btn-succ:hover { background: rgba(0,230,118,.18); }
+    .btn-inf  { padding: 6px 13px; background: rgba(64,196,255,.1); border: 1px solid rgba(64,196,255,.3); border-radius: var(--radius-sm); color: var(--info, #40c4ff); font-family: 'Exo 2', sans-serif; font-size: 10px; font-weight: 700; cursor: pointer; transition: var(--transition); }
+    .btn-inf:hover  { background: rgba(64,196,255,.18); }
+    .btn-wrn  { padding: 6px 13px; background: rgba(255,179,0,.1); border: 1px solid rgba(255,179,0,.35); border-radius: var(--radius-sm); color: var(--warning); font-family: 'Exo 2', sans-serif; font-size: 10px; font-weight: 700; cursor: pointer; transition: var(--transition); }
+    .btn-wrn:hover  { background: rgba(255,179,0,.18); }
+    .btn-wrn:disabled { opacity: .4; cursor: not-allowed; }
+  </style>
+</head>
+<body data-mode="normal">
+
+<!-- ============================================================
+     BELL POPUP
+     ============================================================ -->
+<div class="bell-popup" id="bellPop">
+  <div class="bell-popup-card">
+    <span class="bell-popup-icon">🔔</span>
+    <div class="bell-popup-title">BELL BERBUNYI</div>
+    <div class="bell-popup-name" id="bpname">—</div>
+    <div class="bell-popup-time" id="bptime">07:00</div>
+    <div class="bell-popup-mode" id="bpmode">Mode Normal</div>
+    <button class="bell-popup-close" onclick="hideOverlay('bellPop')">✕ Tutup</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCHEDULE MODAL (Add/Edit)
+     ============================================================ -->
+<div class="modal-overlay" id="schedModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="mttl">➕ Tambah Jadwal</div>
+      <button class="modal-close" onclick="hideOverlay('schedModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span class="mbdg mb-n" id="mmodelbdg" style="padding:3px 10px;font-size:9px;display:inline-flex;align-items:center;gap:5px;border-radius:100px;border:1.5px solid;">Normal</span>
+        <span style="font-size:9px;color:var(--text-muted);">Hari: <strong id="mdaylbl" style="color:var(--accent);">Senin</strong></span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">⏰ Waktu</label>
+          <input type="time" class="form-input" id="mtime" value="07:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">📝 Nama Kegiatan</label>
+          <input type="text" class="form-input" id="mname" placeholder="Contoh: Pelajaran 1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔊 Teks Pengumuman (TTS)</label>
+        <textarea class="form-textarea" id="mannounce" rows="2" placeholder="Teks yang dibacakan saat bell berbunyi..."></textarea>
+      </div>
+
+      <!-- Sound selector -->
+      <div class="form-group">
+        <label class="form-label">🎵 Suara Bell untuk Jadwal Ini</label>
+        <div class="snd-sel-btn" id="mSndBtn" onclick="openModalSoundPicker()">
+          <span id="mSndIcon" style="font-size:16px;flex-shrink:0;">🔔</span>
+          <span class="sndname" id="mSndName">Default Bell</span>
+          <span style="font-size:9px;color:var(--text-muted);flex-shrink:0;">Ganti / Upload ▾</span>
+        </div>
+      </div>
+
+      <div class="form-toggle">
+        <div class="toggle-label">🔔 Bell Aktif</div>
+        <div class="toggle-switch on" id="mbell" onclick="toggleSw('mbell')"></div>
+      </div>
+      <div class="form-toggle">
+        <div class="toggle-label">🗣️ Pengumuman Suara (TTS)</div>
+        <div class="toggle-switch" id="mvoice" onclick="toggleSw('mvoice')"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="hideOverlay('schedModal')">Batal</button>
+      <button class="btn btn-primary" onclick="saveItem()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SOUND OPTIONS MODAL (per jadwal / per modal)
+     ============================================================ -->
+<div class="modal-overlay" id="soundOptModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <div class="modal-title">🎵 Pilih / Upload Suara Bell</div>
+      <button class="modal-close" onclick="hideOverlay('soundOptModal')">✕</button>
+    </div>
+    <div class="modal-body" id="soList" style="max-height:75vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TOAST
+     ============================================================ -->
+<div class="toast-container" id="tcon"></div>
+
+<!-- ============================================================
+     MAIN APP
+     ============================================================ -->
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="brand-logo" id="hLogoWrap" onclick="document.getElementById('logoInput').click()" title="Klik untuk ganti logo" style="cursor:pointer;position:relative;">
+        <div id="hLogoEl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;">🔔</div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.5);border-radius:inherit;display:none;align-items:center;justify-content:center;font-size:14px;color:#fff;" id="logoHover">📷</div>
+        <input type="file" id="logoInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(this)">
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">SMART BELL PRO</div>
+        <div class="brand-school" id="hSchoolName">SMPN 2 Umbulsari</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="autosave-badge">
+        <div class="autosave-dot"></div>
+        <span id="autoSaveLbl">Memuat...</span>
+      </div>
+      <div class="active-mode-badge">
+        <div class="pulse-dot"></div>
+        <span id="amtxt">Normal</span>
+      </div>
+      <button class="icon-btn" onclick="testBell()" title="Tes Bell">🔔<span class="tooltip">Tes Bell</span></button>
+      <button class="icon-btn" onclick="switchTab('audio')" title="Suara Bell">🎵<span class="tooltip">Suara Bell</span></button>
+      <button class="icon-btn" onclick="switchTab('export')" title="Backup">💾<span class="tooltip">Backup</span></button>
+    </div>
+  </header>
+
+  <!-- CLOCK -->
+  <section class="clock-section">
+    <div class="clock-container">
+      <div class="clock-ring"></div>
+      <div class="clock-time" id="clk">00<span class="colon">:</span>00</div>
+      <span class="clock-seconds" id="clks">00</span>
+      <div class="clock-date" id="clkd">—</div>
+    </div>
+  </section>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-card highlight">
+      <span class="status-icon">📍</span>
+      <div class="status-info">
+        <div class="status-label">Kegiatan Sekarang</div>
+        <div class="status-value" id="curAct">—</div>
+        <div class="status-sub"  id="curActT">—</div>
+      </div>
+    </div>
+    <div class="status-card">
+      <span class="status-icon">⏭️</span>
+      <div class="status-info">
+        <div class="status-label">Berikutnya</div>
+        <div class="status-value" id="nextAct">—</div>
+        <div class="status-sub"  id="nextActT">—</div>
+      </div>
+    </div>
+    <div class="status-card">
+      <span class="status-icon">⏱️</span>
+      <div class="status-info">
+        <div class="status-label">Countdown</div>
+        <div class="countdown-value" id="cdval">--:--</div>
+        <div class="status-sub"      id="cdlbl">—</div>
+      </div>
+    </div>
+    <div class="status-card">
+      <span class="status-icon">📅</span>
+      <div class="status-info">
+        <div class="status-label">Mode Aktif</div>
+        <div class="status-value" id="sActiveTxt">Normal</div>
+        <div class="status-sub">Bell Otomatis</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN TABS -->
+  <nav class="main-tabs">
+    <button class="main-tab active" data-tab="normal"   onclick="switchTab('normal')">  <span class="tab-icon">🏫</span><span class="tab-label">Normal</span></button>
+    <button class="main-tab"        data-tab="ujian"    onclick="switchTab('ujian')">   <span class="tab-icon">📝</span><span class="tab-label">Ujian</span></button>
+    <button class="main-tab"        data-tab="ramadan"  onclick="switchTab('ramadan')"> <span class="tab-icon">🌙</span><span class="tab-label">Ramadan</span></button>
+    <button class="main-tab"        data-tab="audio"    onclick="switchTab('audio')">   <span class="tab-icon">🎵</span><span class="tab-label">Suara Bell</span></button>
+    <button class="main-tab"        data-tab="history"  onclick="switchTab('history')"> <span class="tab-icon">📊</span><span class="tab-label">Riwayat</span></button>
+    <button class="main-tab"        data-tab="settings" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span><span class="tab-label">Pengaturan</span></button>
+    <button class="main-tab"        data-tab="export"   onclick="switchTab('export')">  <span class="tab-icon">💾</span><span class="tab-label">Ekspor/Impor</span></button>
+  </nav>
+
+  <!-- ============================================================
+       PANEL: NORMAL
+       ============================================================ -->
+  <div class="tab-panel active" id="panel-normal">
+    <div class="mode-panel-header">
+      <div class="mode-panel-title">
+        <span style="font-size:26px;">🏫</span>
+        <div>
+          <div class="mbdg mb-n" style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:11px;font-weight:700;border:1.5px solid;">🏫 MODE NORMAL</div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:3px;">Jadwal belajar reguler</div>
+        </div>
+      </div>
+      <div class="mode-panel-actions">
+        <button class="btn-activate normal" id="ba-normal" onclick="setMode('normal')">▶ Aktifkan</button>
+        <div class="copy-dropdown-wrap" style="position:relative;">
+          <button class="btn btn-ghost btn-sm" onclick="togDrop('cd-normal')">📋 Salin ▾</button>
+          <div class="cpdrop" id="cd-normal">
+            <div class="cdh">Salin jadwal hari ini dari:</div>
+            <div class="cdo" onclick="copyDay('normal','ujian')">   <span>📝</span><div><div class="cdn">Dari Mode Ujian</div>   <div class="cdc" id="ccd-normal-ujian">0 item</div></div></div>
+            <div class="cdo" onclick="copyDay('normal','ramadan')"> <span>🌙</span><div><div class="cdn">Dari Mode Ramadan</div> <div class="cdc" id="ccd-normal-ramadan">0 item</div></div></div>
+            <div class="cdwarn">⚠️ Ganti semua (hapus dulu):</div>
+            <div class="cdo" onclick="replaceDay('normal','ujian')">   <span>🔄</span><div><div class="cdn" style="color:var(--ujian-primary,#ff6b35);">Ganti dengan Ujian</div></div></div>
+            <div class="cdo" onclick="replaceDay('normal','ramadan')"> <span>🔄</span><div><div class="cdn" style="color:var(--ramadan-primary,#a78bfa);">Ganti dengan Ramadan</div></div></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="resetDayMode('normal')">🔄 Reset</button>
+        <button class="btn btn-primary btn-sm" onclick="openAddModal('normal')">➕ Tambah</button>
+      </div>
+    </div>
+    <div class="daytabs" id="dtabs-normal"></div>
+    <div class="schedule-full-card">
+      <div class="schedule-card-header">
+        <div class="schedule-card-title">📋 Jadwal <span id="daytitle-normal" style="color:var(--normal-primary,#00c9ff);">Senin</span> <span class="schedule-card-count" id="sc-normal">0 jadwal</span></div>
+        <button class="btn-add-schedule" onclick="openAddModal('normal')">＋ Tambah</button>
+      </div>
+      <div class="schedule-list" id="sl-normal"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANEL: UJIAN
+       ============================================================ -->
+  <div class="tab-panel" id="panel-ujian">
+    <div class="mode-panel-header">
+      <div class="mode-panel-title">
+        <span style="font-size:26px;">📝</span>
+        <div>
+          <div class="mbdg mb-u" style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:11px;font-weight:700;border:1.5px solid;background:var(--ujian-soft,rgba(255,107,53,.07));border-color:var(--ujian-primary,#ff6b35);color:var(--ujian-primary,#ff6b35);">📝 MODE UJIAN</div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:3px;">Jadwal hari pelaksanaan ujian</div>
+        </div>
+      </div>
+      <div class="mode-panel-actions">
+        <button class="btn-activate ujian" id="ba-ujian" onclick="setMode('ujian')">▶ Aktifkan</button>
+        <div style="position:relative;">
+          <button class="btn btn-ghost btn-sm" onclick="togDrop('cd-ujian')">📋 Salin ▾</button>
+          <div class="cpdrop" id="cd-ujian">
+            <div class="cdh">Salin jadwal hari ini dari:</div>
+            <div class="cdo" onclick="copyDay('ujian','normal')">   <span>🏫</span><div><div class="cdn">Dari Mode Normal</div><div class="cdc" id="ccd-ujian-normal">0 item</div></div></div>
+            <div class="cdo" onclick="copyDay('ujian','ramadan')">  <span>🌙</span><div><div class="cdn">Dari Mode Ramadan</div><div class="cdc" id="ccd-ujian-ramadan">0 item</div></div></div>
+            <div class="cdwarn">⚠️ Ganti semua:</div>
+            <div class="cdo" onclick="replaceDay('ujian','normal')">  <span>🔄</span><div><div class="cdn" style="color:var(--normal-primary,#00c9ff);">Ganti dengan Normal</div></div></div>
+            <div class="cdo" onclick="replaceDay('ujian','ramadan')"> <span>🔄</span><div><div class="cdn" style="color:var(--ramadan-primary,#a78bfa);">Ganti dengan Ramadan</div></div></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="resetDayMode('ujian')">🔄 Reset</button>
+        <button class="btn btn-sm" style="background:var(--ujian-soft,rgba(255,107,53,.07));border:1px solid #ff6b35;color:#ff6b35;padding:7px 14px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;font-weight:700;cursor:pointer;" onclick="openAddModal('ujian')">➕ Tambah</button>
+      </div>
+    </div>
+    <div class="daytabs" id="dtabs-ujian"></div>
+    <div class="schedule-full-card" style="--accent:var(--ujian-primary,#ff6b35);">
+      <div class="schedule-card-header">
+        <div class="schedule-card-title">📋 Jadwal <span id="daytitle-ujian" style="color:#ff6b35;">Senin</span> <span class="schedule-card-count" id="sc-ujian">0 jadwal</span></div>
+        <button class="btn-add-schedule" style="border-color:#ff6b35;color:#ff6b35;background:rgba(255,107,53,.07);" onclick="openAddModal('ujian')">＋ Tambah</button>
+      </div>
+      <div class="schedule-list" id="sl-ujian"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANEL: RAMADAN
+       ============================================================ -->
+  <div class="tab-panel" id="panel-ramadan">
+    <div class="mode-panel-header">
+      <div class="mode-panel-title">
+        <span style="font-size:26px;">🌙</span>
+        <div>
+          <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:11px;font-weight:700;border:1.5px solid;background:var(--ramadan-soft,rgba(167,139,250,.07));border-color:#a78bfa;color:#a78bfa;">🌙 MODE RAMADAN</div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:3px;">Jadwal selama bulan Ramadan</div>
+        </div>
+      </div>
+      <div class="mode-panel-actions">
+        <button class="btn-activate ramadan" id="ba-ramadan" onclick="setMode('ramadan')">▶ Aktifkan</button>
+        <div style="position:relative;">
+          <button class="btn btn-ghost btn-sm" onclick="togDrop('cd-ramadan')">📋 Salin ▾</button>
+          <div class="cpdrop" id="cd-ramadan">
+            <div class="cdh">Salin jadwal hari ini dari:</div>
+            <div class="cdo" onclick="copyDay('ramadan','normal')">  <span>🏫</span><div><div class="cdn">Dari Mode Normal</div> <div class="cdc" id="ccd-ramadan-normal">0 item</div></div></div>
+            <div class="cdo" onclick="copyDay('ramadan','ujian')">   <span>📝</span><div><div class="cdn">Dari Mode Ujian</div>  <div class="cdc" id="ccd-ramadan-ujian">0 item</div></div></div>
+            <div class="cdwarn">⚠️ Ganti semua:</div>
+            <div class="cdo" onclick="replaceDay('ramadan','normal')"> <span>🔄</span><div><div class="cdn" style="color:var(--normal-primary,#00c9ff);">Ganti dengan Normal</div></div></div>
+            <div class="cdo" onclick="replaceDay('ramadan','ujian')">  <span>🔄</span><div><div class="cdn" style="color:#ff6b35;">Ganti dengan Ujian</div></div></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="resetDayMode('ramadan')">🔄 Reset</button>
+        <button class="btn btn-sm" style="background:rgba(167,139,250,.07);border:1px solid #a78bfa;color:#a78bfa;padding:7px 14px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;font-weight:700;cursor:pointer;" onclick="openAddModal('ramadan')">➕ Tambah</button>
+      </div>
+    </div>
+    <div class="daytabs" id="dtabs-ramadan"></div>
+    <div class="schedule-full-card" style="--accent:#a78bfa;">
+      <div class="schedule-card-header">
+        <div class="schedule-card-title">📋 Jadwal <span id="daytitle-ramadan" style="color:#a78bfa;">Senin</span> <span class="schedule-card-count" id="sc-ramadan">0 jadwal</span></div>
+        <button class="btn-add-schedule" style="border-color:#a78bfa;color:#a78bfa;background:rgba(167,139,250,.07);" onclick="openAddModal('ramadan')">＋ Tambah</button>
+      </div>
+      <div class="schedule-list" id="sl-ramadan"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANEL: AUDIO
+       ============================================================ -->
+  <div class="tab-panel" id="panel-audio">
+    <div class="section-header">
+      <div class="section-title">🎵 Perpustakaan Suara Bell</div>
+      <div class="section-line"></div>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('libFileInput').click()">+ Upload File</button>
+      <input type="file" id="libFileInput" accept="audio/*,.mp3,.wav,.ogg,.aac,.flac,.m4a,.opus,.webm" multiple style="display:none;" onchange="uploadToLibrary(this.files)">
+    </div>
+
+    <!-- Upload zone besar untuk perpustakaan -->
+    <div class="upload-area" id="libDropZone" onclick="document.getElementById('libFileInput').click()">
+      <div class="upload-icon">🎵</div>
+      <p>Drag & Drop atau <strong>Klik untuk Upload</strong><br>
+      <small>MP3, WAV, OGG, AAC, FLAC, M4A, OPUS · Bisa pilih banyak file · Maks 15MB/file</small></p>
+      <div style="display:flex;gap:5px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(0,201,255,.1);border:1px solid rgba(0,201,255,.4);color:#00c9ff;">MP3</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.4);color:#00e676;">WAV</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(255,179,0,.1);border:1px solid rgba(255,179,0,.4);color:#ffb300;">OGG</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.4);color:#a78bfa;">AAC</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.4);color:#ff6b35;">FLAC</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(64,196,255,.1);border:1px solid rgba(64,196,255,.3);color:#40c4ff;">M4A + Lainnya</span>
+      </div>
+    </div>
+
+    <!-- Waveform visualizer -->
+    <div class="wave-row" style="margin-top:12px;">
+      <canvas id="wcanvas"></canvas>
+      <div id="wtime">0:00 / 0:00</div>
+    </div>
+
+    <!-- Library list -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;display:flex;align-items:center;gap:7px;">📚 Daftar Suara Bell <span id="libcnt" style="font-size:9px;color:var(--text-muted);background:var(--bg-main);padding:1px 7px;border-radius:100px;border:1px solid var(--border);">0 file</span></div>
+      <button class="btn btn-ghost btn-sm" onclick="stopAudio()">■ Stop</button>
+    </div>
+    <div id="libList"></div>
+
+    <div class="info-card blue" style="margin-top:10px;">
+      💡 Upload file audio lalu klik <strong style="color:var(--success);">✓ Default</strong> untuk default bell. Atau klik chip <strong style="color:var(--accent);">🔔 ▾</strong> pada setiap jadwal untuk upload/pilih suara khusus per jadwal. Semua audio tersimpan otomatis di IndexedDB.
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANEL: HISTORY
+       ============================================================ -->
+  <div class="tab-panel" id="panel-history">
+    <div class="section-header">
+      <div class="section-title">📊 Riwayat Bell</div>
+      <div class="section-line"></div>
+      <button class="btn btn-ghost btn-sm" onclick="clearHist()">🗑️ Hapus</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="filter-chip active" id="hf-all"     onclick="filterHist('all')">Semua</button>
+      <button class="filter-chip"        id="hf-normal"  onclick="filterHist('normal')">🏫 Normal</button>
+      <button class="filter-chip"        id="hf-ujian"   onclick="filterHist('ujian')">📝 Ujian</button>
+      <button class="filter-chip"        id="hf-ramadan" onclick="filterHist('ramadan')">🌙 Ramadan</button>
+    </div>
+    <div id="histList"></div>
+  </div>
+
+  <!-- ============================================================
+       PANEL: SETTINGS
+       ============================================================ -->
+  <div class="tab-panel" id="panel-settings">
+    <div class="section-header" style="margin-bottom:18px;">
+      <div class="section-title">⚙️ Pengaturan Sistem</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="settings-grid">
+
+      <!-- Identitas Sekolah -->
+      <div class="settings-card">
+        <div class="settings-card-header">🏫 Identitas Sekolah</div>
+        <div class="settings-card-body">
+          <div class="form-group">
+            <label class="form-label">Logo Sekolah</label>
+            <div class="logo-upload-container">
+              <div class="logo-preview" id="logoPreviewBox" onclick="document.getElementById('logoInput2').click()" title="Klik untuk ganti logo">
+                🏫
+              </div>
+              <input type="file" id="logoInput2" accept="image/*" style="display:none;" onchange="handleLogoUpload(this)">
+              <div>
+                <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">Klik logo untuk mengganti gambar</div>
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('logoInput2').click()">📁 Upload Logo</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nama Sekolah</label>
+            <input type="text" class="form-input" id="settSchoolName" value="SMPN 2 Umbulsari" placeholder="Nama sekolah">
+          </div>
+        </div>
+      </div>
+
+      <!-- Bell -->
+      <div class="settings-card">
+        <div class="settings-card-header">🔔 Pengaturan Bell</div>
+        <div class="settings-card-body">
+          <div class="form-group">
+            <label class="form-label">Volume Bell</label>
+            <div class="volume-control">
+              <span>🔇</span>
+              <input type="range" class="volume-slider" id="svol" min="0" max="100" value="80" step="1" oninput="document.getElementById('svolv').textContent=this.value+'%'">
+              <span>🔊</span>
+              <span class="volume-value" id="svolv">80%</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Durasi Bell (detik)</label>
+            <input type="number" class="form-input" id="sdur" value="5" min="1" max="30" style="width:90px;">
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="testBell()">🔔 Tes Bell Sekarang</button>
+        </div>
+      </div>
+
+      <!-- Peringatan -->
+      <div class="settings-card">
+        <div class="settings-card-header">⚠️ Bell Peringatan</div>
+        <div class="settings-card-body">
+          <div class="form-toggle">
+            <div class="toggle-label">⚠️ Aktifkan Bell Peringatan</div>
+            <div class="toggle-switch on" id="swarn" onclick="toggleSw('swarn')"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Menit Sebelum Jadwal</label>
+            <input type="number" class="form-input" id="swarnm" value="5" min="1" max="15" style="width:80px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- TTS -->
+      <div class="settings-card">
+        <div class="settings-card-header">🗣️ Pengumuman Suara (TTS)</div>
+        <div class="settings-card-body">
+          <div class="form-toggle">
+            <div class="toggle-label">🗣️ Aktifkan Text-to-Speech</div>
+            <div class="toggle-switch on" id="svoice" onclick="toggleSw('svoice')"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bahasa</label>
+            <select class="form-select" id="svoiceLang">
+              <option value="id-ID">Bahasa Indonesia</option>
+              <option value="en-US">English (US)</option>
+              <option value="jv-ID">Jawa</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="speakTest()">🗣️ Tes Suara</button>
+        </div>
+      </div>
+
+    </div>
+    <div style="text-align:right;margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="loadSettingsUI()">↩ Batal</button>
+      <button class="btn btn-primary" onclick="applySettings()">💾 Simpan Pengaturan</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PANEL: EXPORT / IMPORT
+       ============================================================ -->
+  <div class="tab-panel" id="panel-export">
+    <div class="section-header" style="margin-bottom:14px;">
+      <div class="section-title">💾 Ekspor & Impor Data</div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="info-card green" style="margin-bottom:14px;">
+      🛡️ <strong style="color:var(--success);">Data tersimpan otomatis di IndexedDB</strong> — termasuk file audio yang diupload. Data tidak hilang meski browser di-refresh atau history dihapus. Gunakan <strong>Ekspor ke Komputer</strong> untuk backup file JSON, atau <strong>Simpan ke Browser</strong> untuk backup cepat di localStorage.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <!-- EKSPOR -->
+      <div class="ei-card">
+        <div class="ei-head">📤 Ekspor Data</div>
+        <div class="ei-body">
+          <div class="ei-row">
+            <span style="font-size:20px;flex-shrink:0;">💻</span>
+            <div style="flex:1;"><div style="font-size:11px;font-weight:700;">Ekspor ke Komputer</div><div style="font-size:9px;color:var(--text-muted);margin-top:2px;">Download file .json ke perangkat</div></div>
+            <button class="btn-succ" onclick="exportToFile()">⬇ Download</button>
+          </div>
+          <div class="ei-row">
+            <span style="font-size:20px;flex-shrink:0;">🌐</span>
+            <div style="flex:1;"><div style="font-size:11px;font-weight:700;">Simpan ke Browser (localStorage)</div><div style="font-size:9px;color:var(--text-muted);margin-top:2px;">Bertahan saat halaman di-refresh</div></div>
+            <button class="btn-inf" onclick="saveToBrowser()">💾 Simpan</button>
+          </div>
+          <div class="exp-checks">
+            <div style="font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Pilih yang diekspor:</div>
+            <label class="exp-check-lbl"><input type="checkbox" id="expSched"    checked> Semua Jadwal (6 hari × 3 mode)</label>
+            <label class="exp-check-lbl"><input type="checkbox" id="expSettings" checked> Pengaturan & Nama Sekolah</label>
+            <label class="exp-check-lbl"><input type="checkbox" id="expHistory"  checked> Riwayat Bell</label>
+            <label class="exp-check-lbl"><input type="checkbox" id="expSounds">          Info Suara Bell (nama & jenis)</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMPOR -->
+      <div class="ei-card">
+        <div class="ei-head">📥 Impor Data</div>
+        <div class="ei-body">
+          <div class="ei-row">
+            <span style="font-size:20px;flex-shrink:0;">📁</span>
+            <div style="flex:1;"><div style="font-size:11px;font-weight:700;">Impor dari Komputer</div><div style="font-size:9px;color:var(--text-muted);margin-top:2px;">Pilih file backup .json dari perangkat</div></div>
+            <button class="btn-inf" onclick="document.getElementById('importInput').click()">📂 Pilih</button>
+            <input type="file" id="importInput" accept=".json" style="display:none;" onchange="importFromFile(this)">
+          </div>
+          <div class="ei-row">
+            <span style="font-size:20px;flex-shrink:0;">🌐</span>
+            <div style="flex:1;"><div style="font-size:11px;font-weight:700;">Muat dari Browser</div><div style="font-size:9px;color:var(--text-muted);margin-top:2px;" id="browserDataInfo">Belum ada data</div></div>
+            <button class="btn-wrn" id="btnLoadBrowser" onclick="loadFromBrowser()" disabled>📂 Muat</button>
+          </div>
+          <div style="padding:9px;background:rgba(255,179,0,.05);border:1px solid rgba(255,179,0,.2);border-radius:var(--radius-sm);">
+            <div style="font-size:9px;font-weight:700;color:var(--warning);margin-bottom:3px;">⚠️ Peringatan</div>
+            <div style="font-size:9px;color:var(--text-secondary);line-height:1.6;">Impor akan <strong>mengganti</strong> data saat ini. Ekspor dulu sebagai backup sebelum mengimpor.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Info -->
+    <div class="data-info">
+      <div class="di-row"><span class="di-lbl">🏫 Nama Sekolah</span>     <span class="di-val" id="di-school">SMPN 2 UMBULSARI</span></div>
+      <div class="di-row"><span class="di-lbl">🔔 Mode Aktif</span>        <span class="di-val" id="di-mode">NORMAL</span></div>
+      <div class="di-row"><span class="di-lbl">📋 Total Jadwal</span>      <span class="di-val" id="di-sch">0 item</span></div>
+      <div class="di-row"><span class="di-lbl">🎵 File Audio (IndexedDB)</span><span class="di-val" id="di-snd">0 file</span></div>
+      <div class="di-row"><span class="di-lbl">📊 Riwayat Bell</span>      <span class="di-val" id="di-hist">0 entri</span></div>
+      <div class="di-row"><span class="di-lbl">💾 Auto-save</span>         <span class="di-val" id="di-saved">IndexedDB</span></div>
+    </div>
+  </div>
+
+</div><!-- end app-shell -->
+
+<!-- Footer -->
+<footer class="app-footer">
+  <span>🔔</span>
+  <span>Smart School Bell System PRO · v6.0 · SMPN 2 Umbulsari</span>
+  <span>·</span>
+  <span id="fmode">Mode: Normal</span>
+</footer>
+
+<!-- CSS Inline untuk elemen mode badge & copy dropdown -->
+<style>
+.mbdg { font-family: 'Exo 2', sans-serif; }
+.mb-n { background: var(--normal-soft, rgba(0,201,255,.07)); border-color: var(--normal-primary, #00c9ff) !important; color: var(--normal-primary, #00c9ff) !important; }
+
+/* Copy dropdown */
+.cpdrop { position:absolute; top:calc(100%+5px); right:0; background:var(--bg-card-2); border:1px solid var(--border-bright); border-radius:var(--radius-md); min-width:220px; z-index:200; display:none; overflow:hidden; box-shadow:0 8px 28px rgba(0,0,0,.5); }
+.cpdrop.op { display:block; animation:fadeIn .15s ease; }
+.cdh  { padding:7px 12px 4px; font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.7px; font-weight:700; border-bottom:1px solid var(--border); font-family:'Exo 2',sans-serif; }
+.cdo  { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; font-size:11px; transition:var(--transition,all .2s); color:var(--text-secondary); font-family:'Exo 2',sans-serif; }
+.cdo:hover { background:var(--bg-hover); color:var(--text-primary); }
+.cdn  { font-weight:700; font-size:10px; }
+.cdc  { font-size:9px; color:var(--text-muted); }
+.cdwarn { padding:5px 12px 3px; font-size:9px; color:var(--warning,#ffb300); border-top:1px solid var(--border); font-family:'Exo 2',sans-serif; }
+
+/* Day tabs */
+.daytabs { display:flex; gap:4px; margin-bottom:10px; overflow-x:auto; padding-bottom:2px; }
+.daytabs::-webkit-scrollbar { height:2px; }
+.daytabs::-webkit-scrollbar-thumb { background:var(--border-bright); border-radius:1px; }
+.dtab { padding:4px 12px; background:var(--bg-card); border:1px solid var(--border); border-radius:100px; color:var(--text-muted); font-family:'Exo 2',sans-serif; font-size:10px; font-weight:700; cursor:pointer; transition:var(--transition,all .2s); white-space:nowrap; flex-shrink:0; position:relative; }
+.dtab:hover { border-color:var(--border-bright); color:var(--text-secondary); }
+.dtab.on  { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+.dtab.today-tab::after { content:''; position:absolute; top:2px; right:3px; width:5px; height:5px; background:var(--warning,#ffb300); border-radius:50%; }
+
+/* History items */
+.hitem { display:flex; align-items:center; gap:10px; padding:9px 13px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); margin-bottom:4px; transition:var(--transition); }
+.hitem:hover { border-color:var(--border-bright); }
+.htime { font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700; min-width:58px; }
+.htag  { font-size:9px; font-weight:700; padding:2px 7px; border-radius:100px; flex-shrink:0; }
+.ht-n  { background:var(--normal-soft,rgba(0,201,255,.07)); color:var(--normal-primary,#00c9ff); border:1px solid var(--normal-primary,#00c9ff); }
+.ht-u  { background:var(--ujian-soft,rgba(255,107,53,.07));  color:var(--ujian-primary,#ff6b35);  border:1px solid var(--ujian-primary,#ff6b35); }
+.ht-r  { background:var(--ramadan-soft,rgba(167,139,250,.07)); color:var(--ramadan-primary,#a78bfa); border:1px solid var(--ramadan-primary,#a78bfa); }
+
+/* SI tags */
+.si-tags { display:flex; align-items:center; gap:3px; flex-shrink:0; }
+.tag     { font-size:9px; padding:1px 5px; border-radius:100px; font-weight:700; }
+.tb      { background:rgba(0,230,118,.09); color:#00e676; border:1px solid rgba(0,230,118,.28); }
+.tv      { background:rgba(64,196,255,.09); color:#40c4ff; border:1px solid rgba(64,196,255,.28); }
+.toff    { background:rgba(100,100,100,.09); color:#607080; border:1px solid rgba(100,100,100,.2); }
+
+/* Logo hover */
+#hLogoWrap:hover #logoHover { display:flex !important; }
+</style>
+
+<script src="script.js"></script>
+
+<script>
+/* Extra drag-drop for lib upload zone */
+const libDZ = document.getElementById('libDropZone');
+if (libDZ) {
+  libDZ.addEventListener('dragover', e => { e.preventDefault(); libDZ.classList.add('drag-over'); });
+  libDZ.addEventListener('dragleave', () => libDZ.classList.remove('drag-over'));
+  libDZ.addEventListener('drop', e => {
+    e.preventDefault(); libDZ.classList.remove('drag-over');
+    const fi = document.getElementById('libFileInput');
+    const dt = new DataTransfer();
+    Array.from(e.dataTransfer.files||[]).forEach(f => dt.items.add(f));
+    fi.files = dt.files;
+    uploadToLibrary(fi.files);
+  });
+}
+
+// Extra: clear history (wajib ada karena dipanggil dari HTML)
+function clearHist() {
+  if (!confirm('Hapus semua riwayat bell?')) return;
+  S.history = [];
+  renderHist(null);
+  triggerAutoSave({ schedules: false });
+  toast('🗑️ Riwayat dihapus', 'w');
+}
+</script>
+</body>
+</html>
